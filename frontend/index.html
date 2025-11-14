@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temu Clone - Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="hero-bg pattern-dots">
+    <nav class="navbar">
+    <div class="nav-brand">Temu Clone</div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="cart.html">Cart <span class="cart-count">0</span></a>
+        <a href="about.html">About Us</a>          <!-- NEW -->
+        <a href="contact.html">Contact</a>         <!-- NEW -->
+        <a href="admin.html">Admin</a>
+        <a href="login.html" id="login-link">Login</a>
+        <span id="user-greeting" style="display:none"></span>
+        <button id="logout-btn" style="display:none">Logout</button>
+    </div>
+</nav>
+
+    <div class="container">
+        <header class="hero">
+            <h1>Welcome to Temu Clone</h1>
+            <p>Amazing deals on everything you need!</p>
+            <a href="products.html" class="btn">Shop Now</a>
+        </header>
+
+        <section class="featured-products">
+            <h2>Featured Products</h2>
+            <div id="featured-products" class="products-grid">
+                <!-- Products will be loaded here -->
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

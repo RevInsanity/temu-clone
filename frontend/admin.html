@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Temu Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body classs="admin-bg">
+    <nav class="navbar">
+    <div class="nav-brand">Temu Clone</div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="cart.html">
+            Cart <span class="cart-count">0</span>
+        </a>
+        <a href="admin.html">Admin</a>
+        <a href="login.html" id="login-link">Login</a>
+        <span id="user-greeting" style="display:none"></span>
+        <button id="logout-btn" style="display:none">Logout</button>
+    </div>
+</nav>
+
+    <div class="container">
+        <h1>Admin Panel</h1>
+        
+        <div class="admin-actions">
+            <button onclick="showAddProductForm()" class="btn">Add New Product</button>
+        </div>
+
+        <!-- Add Product Form -->
+        <div id="add-product-form" style="display: none;" class="form-container">
+            <h3>Add New Product</h3>
+            <form id="product-form">
+                <input type="text" id="product-name" placeholder="Product Name" required>
+                <textarea id="product-desc" placeholder="Description" required></textarea>
+                <input type="number" id="product-price" placeholder="Price" step="0.01" required>
+                <input type="text" id="product-category" placeholder="Category" required>
+                <input type="number" id="product-stock" placeholder="Stock" required>
+                <input type="text" id="product-image" placeholder="Image URL">
+                <button type="submit" class="btn">Add Product</button>
+                <button type="button" onclick="hideAddProductForm()" class="btn btn-secondary">Cancel</button>
+            </form>
+        </div>
+
+        <h2>Product Management</h2>
+        <div id="admin-products-list">
+            <!-- Products will be loaded here -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
