@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Temu Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+    <div class="nav-brand">Temu Clone</div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="cart.html">
+            Cart <span class="cart-count">0</span>
+        </a>
+        <a href="admin.html">Admin</a>
+        <a href="login.html" id="login-link">Login</a>
+        <span id="user-greeting" style="display:none"></span>
+        <button id="logout-btn" style="display:none">Logout</button>
+    </div>
+</nav>
+
+    <div class="container">
+        <div class="login-container">
+            <h1>Register</h1>
+            
+            <form id="register-form">
+                <input type="text" id="name" name="name" placeholder="Full Name" required>
+                <input type="email" id="email" name="email" placeholder="Email" required>
+                <input type="password" id="password" name="password" placeholder="Password" required>
+                <input type="number" id="age" name="age" placeholder="Age" required>
+                <input type="text" id="address" name="address" placeholder="Address" required>
+                <input type="text" id="phone" name="phone" placeholder="Phone" required>
+                <button type="submit" class="btn">Register</button>
+            </form>
+            
+            <p id="register-message" style="margin-block-start: 15px;"></p>
+            
+            <div class="demo-accounts">
+                <h3>Already have an account?</h3>
+                <p><a href="index.html">Login here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
