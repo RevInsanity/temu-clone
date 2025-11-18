@@ -41,6 +41,9 @@ app.use(cors({
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
+// Serve static files for frontend FIRST
+app.use(express.static("public"));
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -76,17 +79,9 @@ const upload = multer({
 
 // Serve uploaded files statically
 app.use("/uploads", express.static("uploads"));
-// Serve static files for frontend
-app.use(express.static("public"));
 
-// MongoDB Connection with environment variable
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://ayawsir:Timogan00@database.vyu7sev.mongodb.net/sheetupdater?retryWrites=true&w=majority";
+// ... REST OF YOUR SCHEMAS AND MODELS ...
 
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log("✅ MongoDB connected successfully"))
-  .catch(err => console.error("❌ MongoDB connection error:", err));
-
-// ... REST OF YOUR SCHEMAS AND MODELS REMAIN THE SAME ...
 const UserSchema = new mongoose.Schema({
     name: String,
     email: { type: String, unique: true },
@@ -171,7 +166,7 @@ const isAdmin = (req, res, next) => {
     next();
 };
 
-// ... REST OF YOUR ROUTES AND FUNCTIONS REMAIN THE SAME ...
+// ... REST OF YOUR ROUTES AND FUNCTIONS ...
 
 // Create demo data
 async function createDemoUsers() {
@@ -254,8 +249,6 @@ async function createDemoProducts() {
     }
 }
 
-app.use(express.static("public"));
-
 // ==================== ROUTES ====================
 
 // Health check route
@@ -278,6 +271,8 @@ app.get("/api/test", (req, res) => {
     });
 });
 
+// Add your other API routes here (register, login, products, cart, etc.)
+
 // ==================== ERROR HANDLING ====================
 
 // Basic error handler
@@ -296,8 +291,8 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Serve frontend for all routes (SPA behavior)
-app.get(/.*/, (req, res) => {
+// Serve frontend for all routes (SPA behavior) - This should be LAST
+app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
