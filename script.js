@@ -1,9 +1,11 @@
 // Configuration - Auto-detect API base URL
-const API_BASE = window.location.origin + "/api";
+const API_BASE = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000/api' 
+    : window.location.origin + '/api';
 
 // Global variables
-let currentUser = JSON.parse(localStorage.getItem("currentUser"));
-let authToken = localStorage.getItem("authToken");
+let currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
+let authToken = localStorage.getItem("authToken") || null;
 let allProducts = [];
 let cart = {
     items: [],
@@ -28,6 +30,9 @@ async function testBackendConnection() {
     try {
         console.log("🔍 Testing backend connection...");
         const response = await fetch(`${API_BASE}/test`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
         const result = await response.json();
         console.log("✅ Backend connection:", response.ok ? "SUCCESS" : "FAILED", result.message);
         console.log("🌍 Environment:", result.environment);
@@ -35,32 +40,103 @@ async function testBackendConnection() {
     } catch (error) {
         console.log("❌ Backend connection failed:", error.message);
         console.log("💡 Make sure backend is running on", API_BASE);
+        
+        // Show connection error to user
+        const debugInfo = document.getElementById("debug-info");
+        if (debugInfo) {
+            debugInfo.style.display = "block";
+            document.getElementById("debug-status").textContent = 
+                `Connection failed: ${error.message}. Make sure backend is running on ${API_BASE}`;
+        }
         return false;
     }
 }
 
-// Health check function
-async function checkHealth() {
-    try {
-        const response = await fetch('/health');
-        const result = await response.json();
-        console.log('🏥 Health check:', result.status);
-        return result.status === 'OK';
-    } catch (error) {
-        console.log('❌ Health check failed:', error.message);
-        return false;
+// Create demo users function
+async function createDemoUsers() {
+    const demoUsers = [
+        {
+            name: "Admin User",
+            email: "admin@example.com", 
+            password: "password123",
+            age: 30,
+            address: "123 Admin Street",
+            phone: "123-456-7890",
+            role: "admin"
+        },
+        {
+            name: "Regular User", 
+            email: "user@example.com",
+            password: "password123", 
+            age: 25,
+            address: "456 User Avenue",
+            phone: "987-654-3210",
+            role: "user"
+        }
+    ];
+
+    const results = [];
+    const createButton = document.querySelector('.demo-accounts button');
+    
+    if (createButton) {
+        createButton.disabled = true;
+        createButton.textContent = "Creating Users...";
+    }
+    
+    for (const userData of demoUsers) {
+        try {
+            const response = await fetch(`${API_BASE}/register`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(userData)
+            });
+            
+            const result = await response.json();
+            results.push({ 
+                email: userData.email, 
+                success: response.ok, 
+                message: result.message || result.error 
+            });
+        } catch (error) {
+            results.push({ 
+                email: userData.email, 
+                success: false, 
+                message: error.message 
+            });
+        }
+    }
+    
+    // Show results
+    let message = "Demo users creation results:\n";
+    results.forEach(result => {
+        message += `\n${result.email}: ${result.success ? '✅ Created' : '❌ Failed'} - ${result.message}`;
+    });
+    
+    showNotification(message, results.every(r => r.success) ? "success" : "error");
+    
+    // Pre-fill login form with demo user
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+        emailInput.value = 'user@example.com';
+    }
+    
+    if (createButton) {
+        createButton.disabled = false;
+        createButton.textContent = "Create Demo Users";
     }
 }
 
 // Navigation
 function updateNavigation() {
-    const loginLink = document.getElementById("login-link");
+    const loginLink = document.getElementById("index-link");
     const userGreeting = document.getElementById("user-greeting");
     const logoutBtn = document.getElementById("logout-btn");
     const cartCountElements = document.querySelectorAll(".cart-count");
     const adminLink = document.querySelector('a[href="admin.html"]');
 
-    if (currentUser) {
+    if (currentUser && authToken) {
         if (loginLink) loginLink.style.display = "none";
         if (userGreeting) {
             userGreeting.style.display = "inline";
@@ -84,7 +160,7 @@ function updateNavigation() {
         cartCountElements.forEach(element => {
             if (currentUser.role === 'user') {
                 element.textContent = cart.itemCount || 0;
-                element.style.display = cart.itemCount > 0 ? "inline" : "none";
+                element.style.display = cart.itemCount > 0 ? "inline" : "inline";
             } else {
                 element.style.display = "none"; // Hide cart count for admin
             }
@@ -94,9 +170,10 @@ function updateNavigation() {
         if (userGreeting) userGreeting.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "none";
         
-        // Hide cart count when not logged in
+        // Show cart count as 0 when not logged in
         cartCountElements.forEach(element => {
-            element.style.display = "none";
+            element.textContent = "0";
+            element.style.display = "inline";
         });
     }
 }
@@ -166,13 +243,21 @@ if (loginForm) {
                 
                 console.log("✅ Login successful as:", currentUser.role);
                 
+                // Update navigation immediately
+                updateNavigation();
+                
                 // Load cart after login (only for regular users)
                 if (currentUser.role === 'user') {
                     await loadCart();
                 }
                 
                 setTimeout(() => {
-                    window.location.href = "index.html";
+                    // Redirect based on user role
+                    if (currentUser.role === 'admin') {
+                        window.location.href = "admin.html";
+                    } else {
+                        window.location.href = "home.html";
+                    }
                 }, 1000);
                 
             } else {
@@ -243,7 +328,7 @@ if (registerForm) {
                 registerMessage.className = "success";
                 
                 setTimeout(() => {
-                    window.location.href = "login.html";
+                    window.location.href = "index.html"; // Redirect to login page
                 }, 2000);
             } else {
                 registerMessage.textContent = result.error || "Registration failed";
@@ -261,35 +346,35 @@ if (registerForm) {
     });
 }
 
-// Product Management
+// Page content loading
 async function loadPageContent() {
     const path = window.location.pathname;
     const page = path.split("/").pop() || "index.html";
     
     console.log(`📄 Loading page: ${page}`);
     
-    if (page === "index.html" || page === "") {
+    // Check admin access for admin pages
+    if (page === "admin.html" && currentUser && currentUser.role !== "admin") {
+        showNotification("Admin access required. Please login as admin.", "error");
+        setTimeout(() => window.location.href = "index.html", 2000);
+        return;
+    }
+    
+    // Check authentication for cart page
+    if (page === "cart.html" && (!currentUser || currentUser.role !== "user")) {
+        showNotification("Please login as a regular user to access cart.", "error");
+        setTimeout(() => window.location.href = "index.html", 2000);
+        return;
+    }
+    
+    if (page === "index.html" || page === "" || page === "home.html") {
         await loadFeaturedProducts();
     } else if (page === "products.html") {
         await loadAllProducts();
         setupSearch();
     } else if (page === "admin.html") {
-        if (!currentUser || currentUser.role !== "admin") {
-            alert("Admin access required. Please login as admin.");
-            window.location.href = "login.html";
-            return;
-        }
         await loadAdminProducts();
     } else if (page === "cart.html") {
-        if (!currentUser) {
-            window.location.href = "login.html";
-            return;
-        }
-        if (currentUser.role === 'admin') {
-            alert("Admins cannot access the shopping cart. Please login as a regular user.");
-            window.location.href = "index.html";
-            return;
-        }
         await loadCartPage();
     }
     // About and Contact pages don't need special JavaScript
@@ -301,6 +386,8 @@ async function loadFeaturedProducts() {
     
     try {
         const response = await fetch(`${API_BASE}/products`);
+        if (!response.ok) throw new Error('Failed to fetch products');
+        
         const result = await response.json();
         
         if (result.products && result.products.length > 0) {
@@ -311,7 +398,8 @@ async function loadFeaturedProducts() {
             container.innerHTML = "<p>No products available</p>";
         }
     } catch (error) {
-        container.innerHTML = "<p>Error loading products</p>";
+        console.error("Error loading featured products:", error);
+        container.innerHTML = "<p>Error loading products. Please check backend connection.</p>";
     }
 }
 
@@ -321,6 +409,8 @@ async function loadAllProducts() {
     
     try {
         const response = await fetch(`${API_BASE}/products`);
+        if (!response.ok) throw new Error('Failed to fetch products');
+        
         const result = await response.json();
         
         if (result.products && result.products.length > 0) {
@@ -330,7 +420,8 @@ async function loadAllProducts() {
             container.innerHTML = "<p>No products available</p>";
         }
     } catch (error) {
-        container.innerHTML = "<p>Error loading products</p>";
+        console.error("Error loading products:", error);
+        container.innerHTML = "<p>Error loading products. Please check backend connection.</p>";
     }
 }
 
@@ -341,6 +432,8 @@ async function loadAdminProducts() {
     try {
         // Use the public products API (no auth required for listing)
         const response = await fetch(`${API_BASE}/products`);
+        if (!response.ok) throw new Error('Failed to fetch products');
+        
         const result = await response.json();
         
         if (result.products && result.products.length > 0) {
@@ -349,6 +442,7 @@ async function loadAdminProducts() {
             container.innerHTML = "<p>No products available. Add your first product!</p>";
         }
     } catch (error) {
+        console.error("Error loading admin products:", error);
         container.innerHTML = "<p>Error loading products</p>";
         showNotification("Error loading products: " + error.message, "error");
     }
@@ -418,8 +512,8 @@ function displayAdminProducts(productsArray, container) {
 
 function requestLogin() {
     if (!currentUser) {
-        alert("Please login to add items to cart");
-        window.location.href = "login.html";
+        showNotification("Please login to add items to cart", "info");
+        setTimeout(() => window.location.href = "index.html", 1000);
     }
 }
 
@@ -477,9 +571,9 @@ async function handleProductSubmit(e) {
     e.preventDefault();
     
     // Check authentication first
-    if (!authToken) {
+    if (!authToken || !currentUser || currentUser.role !== "admin") {
         showNotification("Please login as admin first", "error");
-        window.location.href = "login.html";
+        window.location.href = "index.html";
         return;
     }
     
@@ -540,9 +634,9 @@ async function deleteProduct(productId) {
     }
     
     // Check authentication first
-    if (!authToken) {
+    if (!authToken || !currentUser || currentUser.role !== "admin") {
         showNotification("Please login as admin first", "error");
-        window.location.href = "login.html";
+        window.location.href = "index.html";
         return;
     }
     
@@ -568,9 +662,9 @@ async function deleteProduct(productId) {
 
 async function editProduct(productId) {
     // Check authentication first
-    if (!authToken) {
+    if (!authToken || !currentUser || currentUser.role !== "admin") {
         showNotification("Please login as admin first", "error");
-        window.location.href = "login.html";
+        window.location.href = "index.html";
         return;
     }
     
@@ -695,7 +789,7 @@ function updateCartUI() {
         const cartCountElements = document.querySelectorAll(".cart-count");
         cartCountElements.forEach(element => {
             element.textContent = cart.itemCount || 0;
-            element.style.display = cart.itemCount > 0 ? "inline" : "none";
+            element.style.display = "inline";
         });
     }
 }
@@ -754,8 +848,8 @@ function updateCartPageUI() {
 // Add to cart function - ONLY FOR REGULAR USERS
 async function addToCart(productId) {
     if (!currentUser) {
-        alert("Please login to add items to cart");
-        window.location.href = "login.html";
+        showNotification("Please login to add items to cart", "info");
+        setTimeout(() => window.location.href = "index.html", 1000);
         return;
     }
     
@@ -901,7 +995,7 @@ async function checkout() {
             showNotification("Order placed successfully!", "success");
             
             setTimeout(() => {
-                window.location.href = "index.html";
+                window.location.href = "home.html";
             }, 2000);
         } else {
             const result = await response.json();
@@ -922,15 +1016,16 @@ function showNotification(message, type = "info") {
     notification.className = `notification notification-${type}`;
     notification.style.cssText = `
         position: fixed;
-        inset-block-start: 20px;
-        inset-inline-end: 20px;
+        top: 20px;
+        right: 20px;
         padding: 12px 20px;
         border-radius: 4px;
         color: white;
         z-index: 10000;
         font-family: Arial, sans-serif;
-        max-inline-size: 300px;
+        max-width: 300px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        animation: slideIn 0.3s ease;
     `;
     
     const colors = {
@@ -947,16 +1042,31 @@ function showNotification(message, type = "info") {
     
     setTimeout(() => {
         if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
+            notification.style.animation = "slideOut 0.3s ease";
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
         }
-    }, 5000);
+    }, 4000);
 }
 
-// Add CSS classes for message styling
+// Add CSS for notifications
 const style = document.createElement('style');
 style.textContent = `
     .loading { color: blue; font-weight: bold; }
     .success { color: green; font-weight: bold; }
     .error { color: red; font-weight: bold; }
+    
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
 `;
 document.head.appendChild(style);
