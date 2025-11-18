@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Temu Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-bg">
+    <nav class="navbar">
+    <div class="nav-brand">Temu Clone</div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="cart.html">
+            Cart <span class="cart-count">0</span>
+        </a>
+        <a href="admin.html">Admin</a>
+        <a href="login.html" id="login-link">Login</a>
+        <span id="user-greeting" style="display:none"></span>
+        <button id="logout-btn" style="display:none">Logout</button>
+    </div>
+</nav>
+
+    <div class="container">
+        <div class="login-container">
+            <h1>Login</h1>
+            
+            <!-- Debug info -->
+            <div id="debug-info" style="background: #f0f0f0; padding: 10px; margin-block-end: 20px; display: none;">
+                <h4>🔧 Debug Info</h4>
+                <p id="debug-status"></p>
+            </div>
+
+            <form id="login-form">
+                <input type="email" id="email" name="email" placeholder="Email" required>
+                <input type="password" id="password" name="password" placeholder="Password" required>
+                <button type="submit" class="btn">Login</button>
+            </form>
+            
+            <p id="login-message" style="margin-block-start: 15px;"></p>
+            
+            <div class="demo-accounts">
+                <h3>Demo Accounts:</h3>
+                <p><strong>Admin:</strong> admin@example.com / password123</p>
+                <p><strong>User:</strong> user@example.com / password123</p>
+                <button onclick="createDemoUsers()" class="btn" style="margin-block-start: 10px;">Create Demo Users</button>
+            </div>
+
+            <div class="register-link" style="margin-block-start: 20px;">
+    <p>Don't have an account? <a href="register.html">Register here</a></p>
+</div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

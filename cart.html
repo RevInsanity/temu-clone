@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart - Temu Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="cart-bg pattern-grid">
+    <nav class="navbar">
+    <div class="nav-brand">Temu Clone</div>
+    <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="cart.html">
+            Cart <span class="cart-count">0</span>
+        </a>
+        <a href="admin.html">Admin</a>
+        <a href="login.html" id="login-link">Login</a>
+        <span id="user-greeting" style="display:none"></span>
+        <button id="logout-btn" style="display:none">Logout</button>
+    </div>
+</nav>
+
+    <div class="container">
+        <h1>Shopping Cart</h1>
+        
+        <div id="cart-content">
+            <div id="cart-items">
+                <!-- Cart items will be loaded here -->
+            </div>
+            
+            <div id="cart-summary" style="display: none;">
+                <div class="cart-total">
+                    <h3>Order Summary</h3>
+                    <div class="summary-item">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">$0.00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Shipping:</span>
+                        <span id="shipping">$5.99</span>
+                    </div>
+                    <div class="summary-item total">
+                        <span>Total:</span>
+                        <span id="total">$0.00</span>
+                    </div>
+                    <button onclick="checkout()" class="btn" style="inline-size: 100%; margin-block-start: 20px;">
+                        Proceed to Checkout
+                    </button>
+                </div>
+            </div>
+            
+            <div id="empty-cart" style="text-align: center; padding: 40px;">
+                <h3>Your cart is empty</h3>
+                <p>Add some products to get started!</p>
+                <a href="products.html" class="btn">Browse Products</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
