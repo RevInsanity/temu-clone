@@ -6,21 +6,21 @@
     <title>Register - Temu Clone</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="login-bg"> <!-- Added background class -->
     <nav class="navbar">
-    <div class="nav-brand">Temu Clone</div>
-    <div class="nav-links">
-        <a href="home.html">Home</a>
-        <a href="products.html">Products</a>
-        <a href="cart.html">
-            Cart <span class="cart-count">0</span>
-        </a>
-        <a href="admin.html">Admin</a>
-        <a href="index.html" id="lindex-link">Login</a>
-        <span id="user-greeting" style="display:none"></span>
-        <button id="logout-btn" style="display:none">Logout</button>
-    </div>
-</nav>
+        <div class="nav-brand">Temu Clone</div>
+        <div class="nav-links">
+            <a href="home.html">Home</a>
+            <a href="products.html">Products</a>
+            <a href="cart.html">Cart <span class="cart-count">0</span></a>
+            <a href="about.html">About Us</a>
+            <a href="contact.html">Contact</a>
+            <a href="admin.html">Admin</a>
+            <a href="index.html" id="index-link">Login</a> <!-- Fixed ID -->
+            <span id="user-greeting" style="display:none"></span>
+            <button id="logout-btn" style="display:none">Logout</button>
+        </div>
+    </nav>
 
     <div class="container">
         <div class="login-container">
@@ -40,12 +40,11 @@
             
             <div class="demo-accounts">
                 <h3>Already have an account?</h3>
-                <p><a href="home.html">Login here</a></p>
+                <p><a href="index.html">Login here</a></p> <!-- Fixed link -->
             </div>
         </div>
     </div>
 
     <script src="script.js"></script>
 </body>
-
 </html>
