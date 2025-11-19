@@ -2,7 +2,7 @@
 const API_BASE = window.location.hostname === 'localhost' 
     ? 'http://localhost:3000/api' 
     // IMPORTANT: Replace YOUR_BACKEND_NAME.onrender.com with your actual Render backend URL
-    : 'https://https://temu-clone-d4qx.onrender.com/api';
+    : 'https://temu-clone-d4qx.onrender.com/api';
 
 // Global variables
 let currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
@@ -1071,3 +1071,4 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
