@@ -1,7 +1,6 @@
 // Configuration - Auto-detect API base URL
 const API_BASE = window.location.hostname === 'localhost' 
     ? 'http://localhost:3000/api' 
-    // IMPORTANT: Replace YOUR_BACKEND_NAME.onrender.com with your actual Render backend URL
     : 'https://temu-clone-d4qx.onrender.com/api';
 
 // Global variables
@@ -13,6 +12,40 @@ let cart = {
     total: 0,
     itemCount: 0
 };
+
+// --- NEW HELPER FUNCTION ---
+// This function will make all our API calls consistent and secure
+async function apiRequest(endpoint, options = {}) {
+    const url = `${API_BASE}${endpoint}`;
+    
+    const defaultOptions = {
+        headers: {
+            "Content-Type": "application/json",
+        },
+        credentials: 'include' // <-- CRITICAL FIX: Allows cookies/credentials to be sent
+    };
+
+    // Add Authorization header if token exists
+    if (authToken) {
+        defaultOptions.headers.Authorization = `Bearer ${authToken}`;
+    }
+
+    // Merge default options with any provided options (e.g., method, body)
+    const config = { ...defaultOptions, ...options };
+
+    try {
+        const response = await fetch(url, config);
+        // If the server response is not 2xx, throw an error with the server's message
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('API Request Failed:', error);
+        throw error; // Re-throw the error to be caught by the calling function
+    }
+}
 
 // Initialize the app
 document.addEventListener("DOMContentLoaded", function() {
@@ -26,18 +59,14 @@ document.addEventListener("DOMContentLoaded", function() {
     loadCart(); // Load cart on startup
 });
 
-// Test backend connection
+// Test backend connection - NOW USING THE HELPER
 async function testBackendConnection() {
     try {
         console.log("🔍 Testing backend connection...");
-        const response = await fetch(`${API_BASE}/test`);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        const result = await response.json();
-        console.log("✅ Backend connection:", response.ok ? "SUCCESS" : "FAILED", result.message);
+        const result = await apiRequest('/test');
+        console.log("✅ Backend connection: SUCCESS", result.message);
         console.log("🌍 Environment:", result.environment);
-        return response.ok;
+        return true;
     } catch (error) {
         console.log("❌ Backend connection failed:", error.message);
         console.log("💡 Make sure backend is running on", API_BASE);
@@ -53,27 +82,11 @@ async function testBackendConnection() {
     }
 }
 
-// Create demo users function
+// Create demo users function - NOW USING THE HELPER
 async function createDemoUsers() {
     const demoUsers = [
-        {
-            name: "Admin User",
-            email: "admin@example.com", 
-            password: "password123",
-            age: 30,
-            address: "123 Admin Street",
-            phone: "123-456-7890",
-            role: "admin"
-        },
-        {
-            name: "Regular User", 
-            email: "user@example.com",
-            password: "password123", 
-            age: 25,
-            address: "456 User Avenue",
-            phone: "987-654-3210",
-            role: "user"
-        }
+        { name: "Admin User", email: "admin@example.com", password: "password123", age: 30, address: "123 Admin Street", phone: "123-456-7890", role: "admin" },
+        { name: "Regular User", email: "user@example.com", password: "password123", age: 25, address: "456 User Avenue", phone: "987-654-3210", role: "user" }
     ];
 
     const results = [];
@@ -86,26 +99,13 @@ async function createDemoUsers() {
     
     for (const userData of demoUsers) {
         try {
-            const response = await fetch(`${API_BASE}/register`, {
+            const result = await apiRequest('/register', {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
                 body: JSON.stringify(userData)
             });
-            
-            const result = await response.json();
-            results.push({ 
-                email: userData.email, 
-                success: response.ok, 
-                message: result.message || result.error 
-            });
+            results.push({ email: userData.email, success: true, message: result.message });
         } catch (error) {
-            results.push({ 
-                email: userData.email, 
-                success: false, 
-                message: error.message 
-            });
+            results.push({ email: userData.email, success: false, message: error.message });
         }
     }
     
@@ -119,9 +119,7 @@ async function createDemoUsers() {
     
     // Pre-fill login form with demo user
     const emailInput = document.getElementById('email');
-    if (emailInput) {
-        emailInput.value = 'user@example.com';
-    }
+    if (emailInput) emailInput.value = 'user@example.com';
     
     if (createButton) {
         createButton.disabled = false;
@@ -148,30 +146,22 @@ function updateNavigation() {
             logoutBtn.onclick = logout;
         }
         
-        // Show/hide admin link based on role
         if (adminLink) {
-            if (currentUser.role === 'admin') {
-                adminLink.style.display = 'inline';
-            } else {
-                adminLink.style.display = 'none';
-            }
+            adminLink.style.display = currentUser.role === 'admin' ? 'inline' : 'none';
         }
         
-        // Update cart count in navigation - only for regular users
         cartCountElements.forEach(element => {
             if (currentUser.role === 'user') {
                 element.textContent = cart.itemCount || 0;
-                element.style.display = cart.itemCount > 0 ? "inline" : "inline";
+                element.style.display = "inline";
             } else {
-                element.style.display = "none"; // Hide cart count for admin
+                element.style.display = "none";
             }
         });
     } else {
         if (loginLink) loginLink.style.display = "inline";
         if (userGreeting) userGreeting.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "none";
-        
-        // Show cart count as 0 when not logged in
         cartCountElements.forEach(element => {
             element.textContent = "0";
             element.style.display = "inline";
@@ -189,7 +179,7 @@ function logout() {
     window.location.href = "index.html";
 }
 
-// Login functionality
+// Login functionality - NOW USING THE HELPER
 const loginForm = document.getElementById("login-form");
 if (loginForm) {
     loginForm.addEventListener("submit", async function(e) {
@@ -198,11 +188,10 @@ if (loginForm) {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
         const loginMessage = document.getElementById("login-message");
-        const loginButton = document.querySelector('#login-form button[type="submit"]');
+        const loginButton = this.querySelector('button[type="submit"]');
         
         console.log("🔐 Login attempt:", email);
         
-        // Disable button and show loading
         if (loginButton) {
             loginButton.disabled = true;
             loginButton.textContent = "Logging in...";
@@ -211,74 +200,34 @@ if (loginForm) {
         loginMessage.className = "loading";
         
         try {
-            // Add timeout to prevent hanging
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-            
-            const response = await fetch(`${API_BASE}/login`, {
+            const result = await apiRequest('/login', {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ 
-                    email: email, 
-                    password: password 
-                }),
-                signal: controller.signal
+                body: JSON.stringify({ email, password })
             });
             
-            clearTimeout(timeoutId);
+            currentUser = result.user;
+            authToken = result.token;
             
-            const result = await response.json();
+            localStorage.setItem("currentUser", JSON.stringify(currentUser));
+            localStorage.setItem("authToken", authToken);
             
-            if (response.ok) {
-                // Login successful
-                currentUser = result.user;
-                authToken = result.token;
-                
-                localStorage.setItem("currentUser", JSON.stringify(currentUser));
-                localStorage.setItem("authToken", authToken);
-                
-                loginMessage.textContent = "Login successful! Redirecting...";
-                loginMessage.className = "success";
-                
-                console.log("✅ Login successful as:", currentUser.role);
-                
-                // Update navigation immediately
-                updateNavigation();
-                
-                // Load cart after login (only for regular users)
-                if (currentUser.role === 'user') {
-                    await loadCart();
-                }
-                
-                setTimeout(() => {
-                    // Redirect based on user role
-                    if (currentUser.role === 'admin') {
-                        window.location.href = "admin.html";
-                    } else {
-                        window.location.href = "home.html";
-                    }
-                }, 1000);
-                
-            } else {
-                // Login failed
-                loginMessage.textContent = result.error || "Login failed";
-                loginMessage.className = "error";
-                console.log("❌ Login failed:", result.error);
-            }
+            loginMessage.textContent = "Login successful! Redirecting...";
+            loginMessage.className = "success";
+            
+            console.log("✅ Login successful as:", currentUser.role);
+            
+            updateNavigation();
+            if (currentUser.role === 'user') await loadCart();
+            
+            setTimeout(() => {
+                window.location.href = currentUser.role === 'admin' ? "admin.html" : "home.html";
+            }, 1000);
+            
         } catch (error) {
-            if (error.name === 'AbortError') {
-                loginMessage.textContent = "Login timeout - server is not responding";
-            } else if (error.message.includes("Failed to fetch")) {
-                loginMessage.textContent = "Cannot connect to server. Please check if backend is running.";
-            } else {
-                loginMessage.textContent = "Login error: " + error.message;
-            }
+            loginMessage.textContent = error.message || "Login failed";
             loginMessage.className = "error";
             console.error("❌ Login error:", error);
         } finally {
-            // Re-enable button
             if (loginButton) {
                 loginButton.disabled = false;
                 loginButton.textContent = "Login";
@@ -287,7 +236,7 @@ if (loginForm) {
     });
 }
 
-// Registration functionality
+// Registration functionality - NOW USING THE HELPER
 const registerForm = document.getElementById("register-form");
 if (registerForm) {
     registerForm.addEventListener("submit", async function(e) {
@@ -303,7 +252,7 @@ if (registerForm) {
         };
         
         const registerMessage = document.getElementById("register-message");
-        const registerButton = document.querySelector('#register-form button[type="submit"]');
+        const registerButton = this.querySelector('button[type="submit"]');
         
         registerMessage.textContent = "Creating account...";
         registerMessage.className = "loading";
@@ -314,29 +263,17 @@ if (registerForm) {
         }
         
         try {
-            const response = await fetch(`${API_BASE}/register`, {
+            const result = await apiRequest('/register', {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
                 body: JSON.stringify(userData)
             });
             
-            const result = await response.json();
+            registerMessage.textContent = "Registration successful! Redirecting to login...";
+            registerMessage.className = "success";
             
-            if (response.ok) {
-                registerMessage.textContent = "Registration successful! Redirecting to login...";
-                registerMessage.className = "success";
-                
-                setTimeout(() => {
-                    window.location.href = "index.html"; // Redirect to login page
-                }, 2000);
-            } else {
-                registerMessage.textContent = result.error || "Registration failed";
-                registerMessage.className = "error";
-            }
+            setTimeout(() => window.location.href = "index.html", 2000);
         } catch (error) {
-            registerMessage.textContent = "Network error. Please try again.";
+            registerMessage.textContent = error.message || "Registration failed";
             registerMessage.className = "error";
         } finally {
             if (registerButton) {
@@ -351,17 +288,14 @@ if (registerForm) {
 async function loadPageContent() {
     const path = window.location.pathname;
     const page = path.split("/").pop() || "index.html";
-    
     console.log(`📄 Loading page: ${page}`);
     
-    // Check admin access for admin pages
     if (page === "admin.html" && currentUser && currentUser.role !== "admin") {
         showNotification("Admin access required. Please login as admin.", "error");
         setTimeout(() => window.location.href = "index.html", 2000);
         return;
     }
     
-    // Check authentication for cart page
     if (page === "cart.html" && (!currentUser || currentUser.role !== "user")) {
         showNotification("Please login as a regular user to access cart.", "error");
         setTimeout(() => window.location.href = "index.html", 2000);
@@ -378,7 +312,6 @@ async function loadPageContent() {
     } else if (page === "cart.html") {
         await loadCartPage();
     }
-    // About and Contact pages don't need special JavaScript
 }
 
 async function loadFeaturedProducts() {
@@ -386,15 +319,9 @@ async function loadFeaturedProducts() {
     if (!container) return;
     
     try {
-        const response = await fetch(`${API_BASE}/products`);
-        if (!response.ok) throw new Error('Failed to fetch products');
-        
-        const result = await response.json();
-        
+        const result = await apiRequest('/products');
         if (result.products && result.products.length > 0) {
-            // Take first 4 products for featured section
-            const featuredProducts = result.products.slice(0, 4);
-            displayProducts(featuredProducts, container);
+            displayProducts(result.products.slice(0, 4), container);
         } else {
             container.innerHTML = "<p>No products available</p>";
         }
@@ -409,11 +336,7 @@ async function loadAllProducts() {
     if (!container) return;
     
     try {
-        const response = await fetch(`${API_BASE}/products`);
-        if (!response.ok) throw new Error('Failed to fetch products');
-        
-        const result = await response.json();
-        
+        const result = await apiRequest('/products');
         if (result.products && result.products.length > 0) {
             allProducts = result.products;
             displayProducts(allProducts, container);
@@ -431,12 +354,7 @@ async function loadAdminProducts() {
     if (!container) return;
     
     try {
-        // Use the public products API (no auth required for listing)
-        const response = await fetch(`${API_BASE}/products`);
-        if (!response.ok) throw new Error('Failed to fetch products');
-        
-        const result = await response.json();
-        
+        const result = await apiRequest('/products');
         if (result.products && result.products.length > 0) {
             displayAdminProducts(result.products, container);
         } else {
@@ -461,24 +379,13 @@ function displayProducts(productsArray, container) {
         
         return `
         <div class="product-card">
-            <img src="${product.image || "https://via.placeholder.com/300x200?text=No+Image"}" 
-                 alt="${product.name}" 
-                 class="product-image"
-                 onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
+            <img src="${product.image || "https://via.placeholder.com/300x200?text=No+Image"}" alt="${product.name}" class="product-image" onerror="this.src='https://via.placeholder.com/300x200?text=No+Image'">
             <h3 class="product-title">${product.name}</h3>
             <p class="product-description">${product.description}</p>
             <div class="product-category">${product.category}</div>
             <div class="product-price">$${product.price}</div>
             <div class="product-stock">Stock: ${product.stock}</div>
-            ${canAddToCart ? `
-                <button onclick="addToCart('${product._id}')" class="btn" ${product.stock === 0 ? "disabled" : ""}>
-                    ${product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-                </button>
-            ` : isAdmin ? `
-                <button class="btn" disabled>Admin View Only</button>
-            ` : `
-                <button onclick="requestLogin()" class="btn">Login to Purchase</button>
-            `}
+            ${canAddToCart ? `<button onclick="addToCart('${product._id}')" class="btn" ${product.stock === 0 ? "disabled" : ""}>${product.stock === 0 ? "Out of Stock" : "Add to Cart"}</button>` : isAdmin ? `<button class="btn" disabled>Admin View Only</button>` : `<button onclick="requestLogin()" class="btn">Login to Purchase</button>`}
         </div>
     `}).join("");
 }
@@ -522,13 +429,8 @@ function requestLogin() {
 function setupSearch() {
     const searchInput = document.getElementById("search-input");
     const categoryFilter = document.getElementById("category-filter");
-    
-    if (searchInput) {
-        searchInput.addEventListener("input", filterProducts);
-    }
-    if (categoryFilter) {
-        categoryFilter.addEventListener("change", filterProducts);
-    }
+    if (searchInput) searchInput.addEventListener("input", filterProducts);
+    if (categoryFilter) categoryFilter.addEventListener("change", filterProducts);
 }
 
 function filterProducts() {
@@ -538,8 +440,7 @@ function filterProducts() {
     if (!allProducts || allProducts.length === 0) return;
     
     let filtered = allProducts.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm) || 
-                            (product.description && product.description.toLowerCase().includes(searchTerm));
+        const matchesSearch = product.name.toLowerCase().includes(searchTerm) || (product.description && product.description.toLowerCase().includes(searchTerm));
         const matchesCategory = !category || product.category === category;
         return matchesSearch && matchesCategory;
     });
@@ -556,22 +457,14 @@ function showAddProductForm() {
 function hideAddProductForm() {
     document.getElementById("add-product-form").style.display = "none";
     document.getElementById("product-form").reset();
-    
-    // Reset form handler to add mode
     const form = document.getElementById("product-form");
     form.onsubmit = handleProductSubmit;
-    
-    // Update button text
     const submitBtn = form.querySelector('button[type="submit"]');
-    if (submitBtn) {
-        submitBtn.textContent = "Add Product";
-    }
+    if (submitBtn) submitBtn.textContent = "Add Product";
 }
 
 async function handleProductSubmit(e) {
     e.preventDefault();
-    
-    // Check authentication first
     if (!authToken || !currentUser || currentUser.role !== "admin") {
         showNotification("Please login as admin first", "error");
         window.location.href = "index.html";
@@ -587,7 +480,7 @@ async function handleProductSubmit(e) {
         image: document.getElementById("product-image").value || "https://via.placeholder.com/300x200?text=Product+Image"
     };
     
-    const submitBtn = document.querySelector('#product-form button[type="submit"]');
+    const submitBtn = this.querySelector('button[type="submit"]');
     
     try {
         if (submitBtn) {
@@ -595,24 +488,14 @@ async function handleProductSubmit(e) {
             submitBtn.textContent = "Saving...";
         }
         
-        const response = await fetch(`${API_BASE}/admin/products`, {
+        await apiRequest('/admin/products', {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${authToken}`
-            },
             body: JSON.stringify(productData)
         });
         
-        if (response.ok) {
-            const result = await response.json();
-            hideAddProductForm();
-            await loadAdminProducts();
-            showNotification("Product added successfully!", "success");
-        } else {
-            const result = await response.json();
-            showNotification("Error: " + (result.error || "Failed to add product"), "error");
-        }
+        hideAddProductForm();
+        await loadAdminProducts();
+        showNotification("Product added successfully!", "success");
     } catch (error) {
         showNotification("Error adding product: " + error.message, "error");
     } finally {
@@ -623,18 +506,12 @@ async function handleProductSubmit(e) {
     }
 }
 
-// Initialize product form
 const productForm = document.getElementById("product-form");
-if (productForm) {
-    productForm.addEventListener("submit", handleProductSubmit);
-}
+if (productForm) productForm.addEventListener("submit", handleProductSubmit);
 
 async function deleteProduct(productId) {
-    if (!confirm("Are you sure you want to delete this product?")) {
-        return;
-    }
+    if (!confirm("Are you sure you want to delete this product?")) return;
     
-    // Check authentication first
     if (!authToken || !currentUser || currentUser.role !== "admin") {
         showNotification("Please login as admin first", "error");
         window.location.href = "index.html";
@@ -642,27 +519,17 @@ async function deleteProduct(productId) {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/admin/products/${productId}`, {
-            method: "DELETE",
-            headers: {
-                "Authorization": `Bearer ${authToken}`
-            }
+        await apiRequest(`/admin/products/${productId}`, {
+            method: "DELETE"
         });
-        
-        if (response.ok) {
-            await loadAdminProducts();
-            showNotification("Product deleted successfully!", "success");
-        } else {
-            const result = await response.json();
-            showNotification("Error: " + (result.error || "Failed to delete product"), "error");
-        }
+        await loadAdminProducts();
+        showNotification("Product deleted successfully!", "success");
     } catch (error) {
         showNotification("Error deleting product: " + error.message, "error");
     }
 }
 
 async function editProduct(productId) {
-    // Check authentication first
     if (!authToken || !currentUser || currentUser.role !== "admin") {
         showNotification("Please login as admin first", "error");
         window.location.href = "index.html";
@@ -670,11 +537,7 @@ async function editProduct(productId) {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/products/${productId}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch product');
-        }
-        const product = await response.json();
+        const product = await apiRequest(`/products/${productId}`);
         
         // Fill form with product data
         document.getElementById("product-name").value = product.name;
@@ -684,7 +547,6 @@ async function editProduct(productId) {
         document.getElementById("product-stock").value = product.stock;
         document.getElementById("product-image").value = product.image || "";
         
-        // Change form handler to update mode
         const form = document.getElementById("product-form");
         form.onsubmit = async function(e) {
             e.preventDefault();
@@ -706,23 +568,14 @@ async function editProduct(productId) {
                     submitBtn.textContent = "Updating...";
                 }
                 
-                const response = await fetch(`${API_BASE}/admin/products/${productId}`, {
+                await apiRequest(`/admin/products/${productId}`, {
                     method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${authToken}`
-                    },
                     body: JSON.stringify(updateData)
                 });
                 
-                if (response.ok) {
-                    hideAddProductForm();
-                    await loadAdminProducts();
-                    showNotification("Product updated successfully!", "success");
-                } else {
-                    const result = await response.json();
-                    showNotification("Error: " + (result.error || "Failed to update product"), "error");
-                }
+                hideAddProductForm();
+                await loadAdminProducts();
+                showNotification("Product updated successfully!", "success");
             } catch (error) {
                 showNotification("Error updating product: " + error.message, "error");
             } finally {
@@ -733,12 +586,8 @@ async function editProduct(productId) {
             }
         };
         
-        // Update button text
         const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.textContent = "Update Product";
-        }
-        
+        if (submitBtn) submitBtn.textContent = "Update Product";
         showAddProductForm();
     } catch (error) {
         showNotification("Error loading product: " + error.message, "error");
@@ -754,21 +603,9 @@ async function loadCart() {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/cart`, {
-            headers: {
-                "Authorization": `Bearer ${authToken}`
-            }
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            cart = result;
-            updateCartUI();
-            updateNavigation();
-        } else {
-            console.error("Failed to load cart");
-            cart = { items: [], total: 0, itemCount: 0 };
-        }
+        cart = await apiRequest('/cart');
+        updateCartUI();
+        updateNavigation();
     } catch (error) {
         console.error("Error loading cart:", error);
         cart = { items: [], total: 0, itemCount: 0 };
@@ -776,16 +613,12 @@ async function loadCart() {
 }
 
 async function loadCartPage() {
-    if (!currentUser || currentUser.role !== 'user') {
-        return;
-    }
-    
+    if (!currentUser || currentUser.role !== 'user') return;
     await loadCart();
     updateCartPageUI();
 }
 
 function updateCartUI() {
-    // Update cart count in navigation - only for regular users
     if (currentUser && currentUser.role === 'user') {
         const cartCountElements = document.querySelectorAll(".cart-count");
         cartCountElements.forEach(element => {
@@ -814,28 +647,21 @@ function updateCartPageUI() {
     
     cartItems.innerHTML = cart.items.map(item => `
         <div class="cart-item">
-            <img src="${item.image || "https://via.placeholder.com/100x100?text=No+Image"}" 
-                 alt="${item.name}" class="cart-item-image">
+            <img src="${item.image || "https://via.placeholder.com/100x100?text=No+Image"}" alt="${item.name}" class="cart-item-image">
             <div class="cart-item-details">
                 <h4 class="cart-item-title">${item.name}</h4>
                 <p class="cart-item-price">$${item.price}</p>
             </div>
             <div class="cart-item-controls">
-                <button onclick="updateCartItem('${item.product._id || item.product}', ${item.quantity - 1})" 
-                        class="quantity-btn">-</button>
+                <button onclick="updateCartItem('${item.product._id || item.product}', ${item.quantity - 1})" class="quantity-btn">-</button>
                 <span class="quantity">${item.quantity}</span>
-                <button onclick="updateCartItem('${item.product._id || item.product}', ${item.quantity + 1})" 
-                        class="quantity-btn">+</button>
-                <button onclick="removeFromCart('${item.product._id || item.product}')" 
-                        class="btn btn-danger btn-small">Remove</button>
+                <button onclick="updateCartItem('${item.product._id || item.product}', ${item.quantity + 1})" class="quantity-btn">+</button>
+                <button onclick="removeFromCart('${item.product._id || item.product}')" class="btn btn-danger btn-small">Remove</button>
             </div>
-            <div class="cart-item-total">
-                $${(item.price * item.quantity).toFixed(2)}
-            </div>
+            <div class="cart-item-total">$${(item.price * item.quantity).toFixed(2)}</div>
         </div>
     `).join("");
     
-    // Update summary
     if (cartSummary) {
         const subtotal = cart.total || cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const shipping = 5.99;
@@ -846,44 +672,30 @@ function updateCartPageUI() {
     }
 }
 
-// Add to cart function - ONLY FOR REGULAR USERS
 async function addToCart(productId) {
     if (!currentUser) {
         showNotification("Please login to add items to cart", "info");
         setTimeout(() => window.location.href = "index.html", 1000);
         return;
     }
-    
     if (currentUser.role === 'admin') {
         showNotification("Admins cannot add items to cart. Please login as a regular user.", "error");
         return;
     }
     
     try {
-        const response = await fetch(`${API_BASE}/cart`, {
+        const result = await apiRequest('/cart', {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${authToken}`
-            },
             body: JSON.stringify({ productId, quantity: 1 })
         });
-        
-        if (response.ok) {
-            const result = await response.json();
-            cart = result.cart;
-            updateCartUI();
-            showNotification("Product added to cart!", "success");
-        } else {
-            const result = await response.json();
-            showNotification("Error: " + result.error, "error");
-        }
+        cart = result.cart;
+        updateCartUI();
+        showNotification("Product added to cart!", "success");
     } catch (error) {
         showNotification("Error adding to cart: " + error.message, "error");
     }
 }
 
-// Update cart item quantity - ONLY FOR REGULAR USERS
 async function updateCartItem(productId, newQuantity) {
     if (!currentUser || currentUser.role !== 'user') {
         showNotification("Please login as a regular user to manage cart", "error");
@@ -896,34 +708,20 @@ async function updateCartItem(productId, newQuantity) {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/cart/${productId}`, {
+        const result = await apiRequest(`/cart/${productId}`, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${authToken}`
-            },
             body: JSON.stringify({ quantity: newQuantity })
         });
-        
-        if (response.ok) {
-            const result = await response.json();
-            cart = result.cart;
-            updateCartUI();
-            if (window.location.pathname.includes("cart.html")) {
-                updateCartPageUI();
-            }
-            showNotification("Cart updated", "success");
-        } else {
-            const result = await response.json();
-            showNotification("Error: " + result.error, "error");
-        }
+        cart = result.cart;
+        updateCartUI();
+        if (window.location.pathname.includes("cart.html")) updateCartPageUI();
+        showNotification("Cart updated", "success");
     } catch (error) {
         console.error("Error updating cart:", error);
         showNotification("Error updating cart", "error");
     }
 }
 
-// Remove from cart - ONLY FOR REGULAR USERS
 async function removeFromCart(productId) {
     if (!currentUser || currentUser.role !== 'user') {
         showNotification("Please login as a regular user to manage cart", "error");
@@ -931,32 +729,19 @@ async function removeFromCart(productId) {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/cart/${productId}`, {
-            method: "DELETE",
-            headers: {
-                "Authorization": `Bearer ${authToken}`
-            }
+        const result = await apiRequest(`/cart/${productId}`, {
+            method: "DELETE"
         });
-        
-        if (response.ok) {
-            const result = await response.json();
-            cart = result.cart;
-            updateCartUI();
-            if (window.location.pathname.includes("cart.html")) {
-                updateCartPageUI();
-            }
-            showNotification("Item removed from cart", "success");
-        } else {
-            const result = await response.json();
-            showNotification("Error: " + result.error, "error");
-        }
+        cart = result.cart;
+        updateCartUI();
+        if (window.location.pathname.includes("cart.html")) updateCartPageUI();
+        showNotification("Item removed from cart", "success");
     } catch (error) {
         console.error("Error removing from cart:", error);
         showNotification("Error removing item from cart", "error");
     }
 }
 
-// Checkout function - ONLY FOR REGULAR USERS
 async function checkout() {
     if (!currentUser || currentUser.role !== 'user') {
         showNotification("Only regular users can checkout. Admins cannot make purchases.", "error");
@@ -970,38 +755,22 @@ async function checkout() {
     
     try {
         const orderData = {
-            products: cart.items.map(item => ({
-                productId: item.product._id || item.product,
-                quantity: item.quantity
-            })),
+            products: cart.items.map(item => ({ productId: item.product._id || item.product, quantity: item.quantity })),
             shippingAddress: currentUser.address || "Default Address",
             paymentMethod: "credit card"
         };
         
-        const response = await fetch(`${API_BASE}/orders`, {
+        await apiRequest('/orders', {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${authToken}`
-            },
             body: JSON.stringify(orderData)
         });
         
-        if (response.ok) {
-            // Clear cart after successful order
-            cart = { items: [], total: 0, itemCount: 0 };
-            updateCartUI();
-            updateCartPageUI();
-            
-            showNotification("Order placed successfully!", "success");
-            
-            setTimeout(() => {
-                window.location.href = "home.html";
-            }, 2000);
-        } else {
-            const result = await response.json();
-            showNotification("Error: " + result.error, "error");
-        }
+        cart = { items: [], total: 0, itemCount: 0 };
+        updateCartUI();
+        updateCartPageUI();
+        
+        showNotification("Order placed successfully!", "success");
+        setTimeout(() => window.location.href = "home.html", 2000);
     } catch (error) {
         showNotification("Error creating order: " + error.message, "error");
     }
@@ -1009,33 +778,17 @@ async function checkout() {
 
 // Notification system
 function showNotification(message, type = "info") {
-    // Remove existing notifications
     const existingNotifications = document.querySelectorAll(".notification");
     existingNotifications.forEach(notif => notif.remove());
     
     const notification = document.createElement("div");
     notification.className = `notification notification-${type}`;
     notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 12px 20px;
-        border-radius: 4px;
-        color: white;
-        z-index: 10000;
-        font-family: Arial, sans-serif;
-        max-width: 300px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        animation: slideIn 0.3s ease;
+        position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 4px; color: white; z-index: 10000;
+        font-family: Arial, sans-serif; max-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); animation: slideIn 0.3s ease;
     `;
     
-    const colors = {
-        info: "#2196F3",
-        success: "#4CAF50",
-        warning: "#FF9800",
-        error: "#F44336"
-    };
-    
+    const colors = { info: "#2196F3", success: "#4CAF50", warning: "#FF9800", error: "#F44336" };
     notification.style.backgroundColor = colors[type] || colors.info;
     notification.textContent = message;
     
@@ -1044,11 +797,7 @@ function showNotification(message, type = "info") {
     setTimeout(() => {
         if (notification.parentNode) {
             notification.style.animation = "slideOut 0.3s ease";
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
+            setTimeout(() => { if (notification.parentNode) notification.parentNode.removeChild(notification); }, 300);
         }
     }, 4000);
 }
@@ -1059,16 +808,7 @@ style.textContent = `
     .loading { color: blue; font-weight: bold; }
     .success { color: green; font-weight: bold; }
     .error { color: red; font-weight: bold; }
-    
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
 `;
 document.head.appendChild(style);
-
