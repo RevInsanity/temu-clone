@@ -9,12 +9,25 @@ const path = require("path");
 const fs = require("fs");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000; // Use environment variable for Render
 const JWT_SECRET = "your-secret-key-change-in-production";
+
+// CORS Configuration - Allow requests from both localhost and Netlify
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',  // For local development
+    'http://localhost:5500',  // For VS Code Live Server
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5500',
+    'https://https://temu21.netlify.app/' // <-- IMPORTANT: Replace with your actual Netlify URL
+  ],
+  credentials: true, // Allow cookies to be sent with requests
+  optionsSuccessStatus: 200
+};
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors(corsOptions)); // Use the configured CORS middleware
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -281,7 +294,7 @@ async function initializeDemoData() {
                 break;
             }
         } catch (error) {
-            console.log(`❌ Demo data initialization failed. Retries inset-inline-start: ${retries - 1}`);
+            console.log(`❌ Demo data initialization failed. Retries left: ${retries - 1}`);
         }
         
         retries--;
